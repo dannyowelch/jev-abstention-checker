@@ -55,7 +55,7 @@ For production deployment, add `TYPESAFE_API_KEY` as an environment variable.
 
 This app is ready for Vercel:
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/yourusername/jev-abstention-checker)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/dannyowelch/jev-abstention-checker)
 
 Or manually:
 
