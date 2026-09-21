@@ -55,8 +55,8 @@
       }
     },
     "noul": {
-      "noul": "yes",
-      "confidence": 0.91
+      "type": "noul",
+      "noul": 0.91
     }
   }
 }
@@ -65,6 +65,6 @@
 ## Split Noul Gate Logic
 
 The "Split Noul Gate" in the UI:
-1. Checks `answers.noul.noul === "yes"` AND `answers.noul.confidence > 0.7`
-2. If true: show `answers.forced.choice` with its confidence
-3. If false: show "abstain" with the noul confidence level
+1. Reads `answers.noul.noul` as a float P(yes) in [0, 1]
+2. If `noulP >= 0.7`: show `answers.forced.choice` with its confidence
+3. If `noulP < 0.7`: show "abstain" with the noul probability displayed as percentage
