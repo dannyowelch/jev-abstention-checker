@@ -9,8 +9,7 @@ const RICH_SAMPLE = `Revenue increased 23% year-over-year from $4.2M to $5.2M. C
 type GateResult = {
   choice?: string;
   confidence?: number;
-  noulAnswer?: string;
-  noulConfidence?: number;
+  noulProbability?: number;
   abstained?: boolean;
   error?: string;
 };
@@ -82,22 +81,19 @@ export default function Home() {
         }
 
         if (answers?.noul && answers?.forced) {
-          const noulAnswer = answers.noul.noul;
-          const noulConf = answers.noul.confidence;
-          const hasEvidence = noulAnswer === "yes" && noulConf > 0.7;
+          const noulP = answers.noul.noul;
+          const hasEvidence = typeof noulP === "number" && noulP >= 0.7;
 
           if (hasEvidence) {
             resultsObj.noul = {
-              noulAnswer,
-              noulConfidence: noulConf,
+              noulProbability: noulP,
               choice: answers.forced.choice,
               confidence: answers.forced.confidence,
               abstained: false,
             };
           } else {
             resultsObj.noul = {
-              noulAnswer,
-              noulConfidence: noulConf,
+              noulProbability: noulP,
               abstained: true,
             };
           }
@@ -140,17 +136,15 @@ export default function Home() {
       return (
         <div className="space-y-1">
           {label && <div className="text-xs text-gray-500 font-medium">{label}</div>}
-          {res.noulAnswer && (
+          {typeof res.noulProbability === "number" && (
             <div className="text-sm">
               <span className="font-medium">Evidence sufficient?</span>{" "}
-              <span className={res.noulAnswer === "yes" ? "text-green-700" : "text-orange-700"}>
-                {res.noulAnswer}
+              <span className={res.noulProbability >= 0.7 ? "text-green-700" : "text-orange-700"}>
+                {res.noulProbability >= 0.7 ? "yes" : "no"}
               </span>
-              {res.noulConfidence && (
-                <span className="text-gray-600 ml-1">
-                  ({(res.noulConfidence * 100).toFixed(1)}%)
-                </span>
-              )}
+              <span className="text-gray-600 ml-1">
+                ({(res.noulProbability * 100).toFixed(1)}%)
+              </span>
             </div>
           )}
           {res.abstained ? (
