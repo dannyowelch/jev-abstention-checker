@@ -5,7 +5,7 @@ const TYPESAFE_API_URL = "https://api.typesafe.ai/v1/systemone";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { apiKey, state, labelA, labelB, mode } = body;
+    const { apiKey, state, labelA, labelB, runAll } = body;
 
     if (!apiKey) {
       return NextResponse.json(
@@ -21,54 +21,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let payload;
-
-    if (mode === "forced") {
-      payload = {
-        model: "jev-latest",
-        input: {
-          Choice: {
-            state,
-            choices: [labelA, labelB],
+    const payload = {
+      state,
+      model: "jev-latest",
+      questions: {
+        forced: {
+          type: "choice",
+          instructions: "Which label best fits the state?",
+          criteria: {
+            [labelA]: labelA,
+            [labelB]: labelB,
           },
         },
-      };
-    } else if (mode === "idk") {
-      payload = {
-        model: "jev-latest",
-        input: {
-          Choice: {
-            state,
-            choices: [labelA, labelB, "idk"],
+        idk: {
+          type: "choice",
+          instructions: "Which label best fits the state, or is there insufficient evidence?",
+          criteria: {
+            [labelA]: labelA,
+            [labelB]: labelB,
+            idk: "Not enough evidence to choose",
           },
         },
-      };
-    } else if (mode === "noul") {
-      payload = {
-        model: "jev-latest",
-        input: {
-          Noul: {
-            state,
-            question: `Does the state contain enough decision-relative evidence to choose between "${labelA}" and "${labelB}"?`,
-          },
+        noul: {
+          type: "noul",
+          instructions: `Does the state contain enough decision-relative evidence to choose between "${labelA}" and "${labelB}"?`,
         },
-      };
-    } else if (mode === "noul-choice") {
-      payload = {
-        model: "jev-latest",
-        input: {
-          Choice: {
-            state,
-            choices: [labelA, labelB],
-          },
-        },
-      };
-    } else {
-      return NextResponse.json(
-        { error: "Invalid mode" },
-        { status: 400 }
-      );
-    }
+      },
+    };
 
     const response = await fetch(TYPESAFE_API_URL, {
       method: "POST",

@@ -36,88 +36,71 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [showSwapped, setShowSwapped] = useState(false);
 
-  const callAPI = async (mode: string, swapLabels = false) => {
-    const effectiveLabelA = swapLabels ? labelB : labelA;
-    const effectiveLabelB = swapLabels ? labelA : labelB;
-
-    const response = await fetch("/api/check", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        apiKey,
-        state,
-        labelA: effectiveLabelA,
-        labelB: effectiveLabelB,
-        mode,
-      }),
-    });
-
-    const data = await response.json();
-    
-    if (!response.ok) {
-      return { error: data.error };
-    }
-
-    return data;
-  };
-
   const runAllGates = async (swapLabels = false) => {
     setLoading(true);
     const resultsObj: any = {};
 
     try {
-      const forcedData = await callAPI("forced", swapLabels);
-      if (forcedData.error) {
-        resultsObj.forced = { error: forcedData.error };
-      } else {
-        const choiceOutput = forcedData.output?.Choice;
-        resultsObj.forced = {
-          choice: choiceOutput?.choice,
-          confidence: choiceOutput?.confidence,
-        };
-      }
+      const effectiveLabelA = swapLabels ? labelB : labelA;
+      const effectiveLabelB = swapLabels ? labelA : labelB;
 
-      const idkData = await callAPI("idk", swapLabels);
-      if (idkData.error) {
-        resultsObj.idk = { error: idkData.error };
-      } else {
-        const choiceOutput = idkData.output?.Choice;
-        const chosen = choiceOutput?.choice;
-        resultsObj.idk = {
-          choice: chosen,
-          confidence: choiceOutput?.confidence,
-          abstained: chosen === "idk",
-        };
-      }
+      const response = await fetch("/api/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          apiKey,
+          state,
+          labelA: effectiveLabelA,
+          labelB: effectiveLabelB,
+          runAll: true,
+        }),
+      });
 
-      const noulData = await callAPI("noul", swapLabels);
-      if (noulData.error) {
-        resultsObj.noul = { error: noulData.error };
+      const data = await response.json();
+      
+      if (!response.ok) {
+        resultsObj.forced = { error: data.error };
+        resultsObj.idk = { error: data.error };
+        resultsObj.noul = { error: data.error };
       } else {
-        const noulOutput = noulData.output?.Noul;
-        const hasEvidence = noulOutput?.answer === "yes";
-        const noulConf = noulOutput?.confidence;
+        const answers = data.answers;
 
-        if (hasEvidence && noulConf && noulConf > 0.7) {
-          const choiceData = await callAPI("noul-choice", swapLabels);
-          if (choiceData.error) {
-            resultsObj.noul = { error: choiceData.error };
-          } else {
-            const choiceOutput = choiceData.output?.Choice;
+        if (answers?.forced) {
+          resultsObj.forced = {
+            choice: answers.forced.choice,
+            confidence: answers.forced.confidence,
+          };
+        }
+
+        if (answers?.idk) {
+          const chosen = answers.idk.choice;
+          resultsObj.idk = {
+            choice: chosen,
+            confidence: answers.idk.confidence,
+            abstained: chosen === "idk",
+          };
+        }
+
+        if (answers?.noul && answers?.forced) {
+          const noulAnswer = answers.noul.noul;
+          const noulConf = answers.noul.confidence;
+          const hasEvidence = noulAnswer === "yes" && noulConf > 0.7;
+
+          if (hasEvidence) {
             resultsObj.noul = {
-              noulAnswer: noulOutput.answer,
+              noulAnswer,
               noulConfidence: noulConf,
-              choice: choiceOutput?.choice,
-              confidence: choiceOutput?.confidence,
+              choice: answers.forced.choice,
+              confidence: answers.forced.confidence,
               abstained: false,
             };
+          } else {
+            resultsObj.noul = {
+              noulAnswer,
+              noulConfidence: noulConf,
+              abstained: true,
+            };
           }
-        } else {
-          resultsObj.noul = {
-            noulAnswer: noulOutput?.answer || "no",
-            noulConfidence: noulConf,
-            abstained: true,
-          };
         }
       }
 
